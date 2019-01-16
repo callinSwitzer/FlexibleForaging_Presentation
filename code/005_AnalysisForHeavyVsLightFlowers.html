@@ -224,7 +224,7 @@ dataDir &lt;- file.path(getwd(), &quot;data&quot;)
 figDir &lt;- file.path(getwd(), &quot;figures&quot;)
 
 print(paste(&quot;last run &quot;, Sys.time()))</code></pre>
-<pre><code>## [1] &quot;last run  2019-01-14 13:47:29&quot;</code></pre>
+<pre><code>## [1] &quot;last run  2019-01-15 15:10:40&quot;</code></pre>
 <pre class="r"><code>print(R.version)</code></pre>
 <pre><code>##                _                           
 ## platform       x86_64-w64-mingw32          
@@ -1923,7 +1923,12 @@ ggdraw(aa)</code></pre>
           plot = aa, base_width = 6.5, base_height = 3, dpi = 500)
 
 save_plot(file.path(figDir, &quot;003_HeavyLight_lowRes.png&quot;), 
-          plot = aa, base_width = 6.5, base_height = 3, dpi = 150)</code></pre>
+          plot = aa, base_width = 6.5, base_height = 3, dpi = 150)
+
+
+
+save_plot(file.path(figDir, &quot;003_HeavyLight_lowRes_big.png&quot;), 
+          plot = aa, base_width = 8, base_height = 4, dpi = 500)</code></pre>
 </div>
 </div>
 <div id="make-plots-of-time-vs.performance-raw-data" class="section level1">

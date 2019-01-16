@@ -713,6 +713,11 @@ save_plot(file.path(figDir, "003_HeavyLight.tiff"),
 
 save_plot(file.path(figDir, "003_HeavyLight_lowRes.png"), 
           plot = aa, base_width = 6.5, base_height = 3, dpi = 150)
+
+
+
+save_plot(file.path(figDir, "003_HeavyLight_lowRes_big.png"), 
+          plot = aa, base_width = 8, base_height = 4, dpi = 500)
 ```
 
 
