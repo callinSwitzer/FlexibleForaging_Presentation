@@ -59,8 +59,8 @@ plot(x3, y4)
 plot(x = c(x, x3), y = c(y, y3))
 
 ggplot(data = data.frame(x = c(x, x3), y = c(y, y3)), aes(x , y)) + 
-  geom_point(alpha = 0.1, stroke = 0) + 
-  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  geom_point(alpha = 0, stroke = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size =2) + 
   labs(y = "Sonication frequency (Hz)", 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
@@ -73,9 +73,45 @@ ggsave(file.path(figDir, "HypotheticalHighTrt.svg"), width = 4, height = 3)
 ggsave(file.path(figDir, "HypotheticalHighTrt.png"), dpi = 400, width = 4, height = 3)
 
 
+newDF <- as.tbl(data.frame(x1 = c(x, x3), y = c(y, y3))) %>%
+  mutate(`Reward Status` = recode(as.character(x1 >= 2), 
+                                  "TRUE" = "Rewarded for\nhigh frequency sonications", 
+                                  "FALSE" = "Rewarded for\nany frequency"))
+
+
+ggplot(newDF, aes(x = `Reward Status` , y)) + 
+  geom_boxplot(aes(fill = `Reward Status`), alpha = 0.8, width = 0.5, outlier.colour = NA) +
+  labs(y = "Sonication frequency (Hz)", 
+       x = "") + 
+  ylim(c(250, 400)) + 
+  geom_hline(aes(yintercept = 330), lty = 2) + 
+  scale_fill_manual(values = c("#4a1486", "#6a51a3")) + 
+  theme(legend.position = "none")
+
+ggsave(file.path(figDir, "HypotheticalHighTrt_boxplot.png"), dpi = 400, width = 4, height = 3)
+
+
+newDF <- as.tbl(data.frame(x1 = c(x, x3), y = c(y, y4))) %>%
+  mutate(`Reward Status` = recode(as.character(x1 >= 2), 
+                                  "TRUE" = "Rewarded for\nlow frequency sonications", 
+                                  "FALSE" = "Rewarded for\nany frequency"))
+
+ggplot(newDF, aes(x = `Reward Status` , y)) + 
+  geom_boxplot(aes(fill = `Reward Status`), alpha = 0.8, width = 0.5, outlier.colour = NA) +
+  labs(y = "Sonication frequency (Hz)", 
+       x = "") + 
+  ylim(c(250, 400)) + 
+  geom_hline(aes(yintercept = 330), lty = 2) + 
+  scale_fill_manual(values = c("#4a1486", "#6a51a3")) + 
+  theme(legend.position = "none")
+
+ggsave(file.path(figDir, "HypotheticalLowTrt_boxplot.png"), dpi = 400, width = 4, height = 3)
+
+
+
 ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) + 
-  geom_point(alpha = 0.1, stroke = 0) + 
-  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  geom_point(alpha = 0, stroke = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 2) + 
   labs(y = "Sonication frequency (Hz)", 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
@@ -90,8 +126,8 @@ ggsave(file.path(figDir, "HypotheticalLowTrt.png"), dpi = 400, width = 4, height
 ## Sonication accel
 
 ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) + 
-  geom_point(alpha = 0.1, stroke = 0) + 
-  #stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  geom_point(alpha = 0.0, stroke = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
   labs(y =  expression("Sonication acceleration " (m~s^{-2})), 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
@@ -106,8 +142,8 @@ ggsave(file.path(figDir, "HypotheticalLowTrt_ACCEL.png"), dpi = 400, width = 4, 
 ## Sonication accel for predictable, innate response
 
 ggplot(data = data.frame(x = c(x, x3), y = c(y, y3)), aes(x , (y-min(y))  / 7)) + 
-  geom_point(alpha = 0.1, stroke = 0) + 
-  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  geom_point(alpha = 0, stroke = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 2) + 
   labs(y =  expression("Sonication acceleration " (m~s^{-2})), 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
@@ -138,21 +174,45 @@ factorVar = rep(c(0, 50), each = 500)
 x = seq(0, 1, length.out = length(factorVar))
 y = rnorm(mean = 0, sd = 20, n= length(x)) + 330 - factorVar
 
-ggplot(data.frame(x,y), aes(x , y )) + 
-  geom_point(color = "#8856a7", size = 1.2) + 
+
+weightDF <- data.frame(x,y, factorVar) %>%
+  mutate(`FlowerType` = recode(as.character(factorVar), 
+                                  "0" = "Sham", 
+                                  "50" = "IncreasedMass"))
+ggplot(weightDF, aes(x , y, color = FlowerType )) + 
+  geom_point(size = 1, alpha = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, size = 2) + 
   labs(x = "Visit Number", 
        y = expression("Sonication frequency     "        (Hz))) + 
   theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank()) + 
-  geom_vline(aes(xintercept = 0.5), lty = 2)
+        axis.ticks.x = element_blank(), 
+        legend.position = "none") + 
+  geom_vline(aes(xintercept = 0.5), lty = 2) + 
+  scale_color_manual(values = c("#4a1486", "#6a51a3"))
 
 ggsave(file.path(figDir, "hypotheticalWeight_freq.png"), dpi = 500, width = 4, height = 3)
 
 
-ggplot(data.frame(x,y), aes(x , y )) + 
-  geom_point(color = "#8856a7", size = 1.2) + 
+# Frequency and amplitude plot
+factorVar = rep(c(0, 20), each = 500)
+x = seq(0, 1, length.out = length(factorVar))
+y = rnorm(mean = 0, sd = 20, n= length(x)) + 330 - factorVar
+
+
+weightDF <- data.frame(x,y, factorVar) %>%
+  mutate(`FlowerType` = recode(as.character(factorVar), 
+                               "0" = "Sham", 
+                               "50" = "IncreasedMass"))
+
+ggplot(weightDF, aes(x , y/ 20, color = FlowerType )) + 
+  geom_point(size = 1, alpha = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, size = 2) + 
   labs(x = "Visit Number", 
-       y = expression("Sonication acceleration     "        (m~s^{-2}))) + 
+       y = expression("Sonication acceleration " (m~s^{-2}))) + 
   theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank()) + 
-  geom_vline(aes(xintercept = 0.5), lty = 2)
+        axis.ticks.x = element_blank(), 
+        legend.position = "none") + 
+  geom_vline(aes(xintercept = 0.5), lty = 2) + 
+  scale_color_manual(values = c("#4a1486", "#6a51a3"))
+
+ggsave(file.path(figDir, "hypotheticalWeight_acc.png"), dpi = 500, width = 4, height = 3)
