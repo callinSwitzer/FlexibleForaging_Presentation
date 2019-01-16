@@ -373,8 +373,8 @@ Freq_IT <- ggplot(pframe_freq, aes(x= IT_centered + IT_mean, y=predMean))+
                               ymax = bhi, fill = treatment), alpha = 0.2) + 
               geom_line(aes(color = treatment), alpha = 1) + 
               labs(y =  expression ("Sonication frequency "(Hz)), x = "Intertegular span (mm)") + 
-              scale_color_viridis_d(name = "Flower treatment", begin =0.3, end = 0.8) + 
-              scale_fill_viridis_d(name = "Flower treatment", begin =0.3, end = 0.8) + 
+              scale_color_viridis_d(name = "Flower treatment", begin =0.1, end = 0.4, option = "A") + 
+              scale_fill_viridis_d(name = "Flower treatment", begin =0.1, end = 0.4, option = "A") + 
               theme(legend.position = "top", 
                     legend.background = element_rect(fill=alpha('gray95', 1)), 
                     legend.direction="horizontal") 
@@ -652,8 +652,8 @@ g0IT <- ggplot(pframe_accel, aes(x= IT_centered + IT_mean, y=predMean))+
           geom_line(aes(color = treatment), alpha = 1) + 
           labs(y = expression ("Sonication acceleration "(m~s^{-2})), 
                x = "Intertegular span (mm)") +
-          scale_color_viridis_d(name = "Flower treatment", begin =0.3, end = 0.8) + 
-          scale_fill_viridis_d(name = "Flower treatment", begin =0.3, end = 0.8) + 
+          scale_color_viridis_d(name = "Flower treatment", begin =0.1, end = 0.4, option = "A") + 
+          scale_fill_viridis_d(name = "Flower treatment", begin =0.1, end = 0.4, option = "A") + 
           theme(legend.position = "top", 
             legend.background = element_rect(fill=alpha('gray95', 1)), 
             legend.direction="horizontal") 
@@ -759,7 +759,7 @@ timePlot_freq <- ggplot(newdf4, aes(x = visitNum_centered, y = freq)) +
   xlim(c(-50, 50)) + 
   labs(y = expression ("Sonication frequency  "(Hz)), 
                x = "Visit Number, centered") + 
-   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+   scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A", 
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
 timePlot_freq
 
@@ -786,7 +786,7 @@ timePlot_acc <- ggplot(newdf4, aes(x = visitNum_centered, y = amp_acc)) +
   geom_vline(aes(xintercept = 0), lty = 2) + 
   labs(y = expression ("Sonication acceleration  "(m~s^{-2})), 
                x = "Visit Number, centered") + 
-  scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+  scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A",
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
 
 timePlot_acc
@@ -805,7 +805,7 @@ save_plot(file.path(figDir, "TimePlots_HeavyLight.tiff"),
           plot = ab, base_width = 6.5, base_height = 5, dpi = 500)
 
 save_plot(file.path(figDir, "TimePlots_HeavyLight_lowRes.png"), 
-          plot = ab, base_width = 6.5, base_height = 5, dpi = 200)
+          plot = ab, base_width = 8, base_height = 5, dpi = 700)
 
 
 

@@ -102,7 +102,8 @@ ggplot(newDF, aes(x = `Reward Status` , y)) +
        x = "") + 
   ylim(c(250, 400)) + 
   geom_hline(aes(yintercept = 330), lty = 2) + 
-  scale_fill_manual(values = c("#4a1486", "#6a51a3")) + 
+  #scale_fill_manual(values = c("#4a1486", "#6a51a3")) + 
+  scale_fill_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
   theme(legend.position = "none")
 
 ggsave(file.path(figDir, "HypotheticalLowTrt_boxplot.png"), dpi = 400, width = 4, height = 3)
@@ -147,7 +148,8 @@ ggplot(data = data.frame(x = c(x, x3), y = c(y, y3)), aes(x , (y-min(y))  / 7)) 
   labs(y =  expression("Sonication acceleration " (m~s^{-2})), 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank()) 
+        axis.ticks.x = element_blank()) + 
+  geom_hline(aes(yintercept = 9), lty = 2)
 
 ggsave(file.path(figDir, "HypotheticalLowTrt_ACCEL2.png"), dpi = 400, width = 4, height = 3)
 
@@ -160,10 +162,10 @@ y = 10 * sin(2 * pi* 50 * x)
 ggplot(data.frame(x,y), aes(x , y )) + 
   geom_line(color = "#8856a7", size = 1.2) + 
   labs(x = "Time (s)", 
-       y = expression("Sonication acceleration     "        (m~s^{-2}))) + 
+       y = expression("Sonication acceleration " (m~s^{-2}))) + 
   geom_hline(aes(yintercept = 0), lty = 2)
 
-ggsave(file.path(figDir, "Hypotheticalwave.svg"), width = 6, height = 3)
+ggsave(file.path(figDir, "Hypotheticalwave.png"), width = 6, height = 3, dpi = 500)
 
 
 

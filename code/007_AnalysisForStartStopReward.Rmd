@@ -340,8 +340,8 @@ ggplot(dd, aes(x = time, y = surv, color = treatment)) +
   geom_segment(aes(x=50,xend=50,y=0,yend=1), lty = 2, color= 'black') + 
   scale_x_continuous(breaks = c(0, 25, 50, 75, 100), labels = c(-50, -25, 0, 25, 50))
 
-ggsave(file.path(figDir, "beeSonicationPercentage_StartStop.tiff"), units = "in", dpi = 500, 
-       width = 5.5, height = 4)
+ggsave(file.path(figDir, "beeSonicationPercentage_StartStop.png"), units = "in", dpi = 500, 
+       width = 7, height = 4)
 
 ```
 
@@ -754,8 +754,8 @@ ampPlotIT2 <- ggplot(pframe, aes(x=IT_centered + IT_mean, y=predMean, color = tr
      labs(y = expression ("Sonication acceleration "(m~s^{-2})), x = "Intertegular span (mm)") + 
      geom_ribbon(aes(x = IT_centered + IT_mean, ymin = blo, ymax = bhi), color = NA, alpha = 0.2) + 
   geom_line()+ 
-  scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8) + 
-  scale_fill_viridis_d( name = "Treatment", begin =0.3, end = 0.8) + 
+            scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
+            scale_fill_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
   theme(legend.position = c(0.2, 0.4), 
         legend.background = element_rect(fill = "white"))
 ampPlotIT2
@@ -796,8 +796,8 @@ ampPlot_oneCol <- ggplot(pframe[pframe$Colony == "4", ],
            labs(y = expression ("Sonication acceleration "(m~s^{-2})), x = "Intertegular span (mm)") + 
             facet_grid( ~ `Treatment Order`, labeller = labeller(`Treatment Order`= label_both, Colony = label_both), scales = 'free_x') +
                
-            scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8) + 
-            scale_fill_viridis_d( name = "Treatment", begin =0.3, end = 0.8) + 
+            scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
+            scale_fill_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
             theme(legend.position = c(0.2, 0.8), 
                   strip.background =element_rect(fill = "white", linetype = 1, size = 1, color = 'black'), 
                   legend.background = element_rect(fill=alpha('white', 1)), 
@@ -1087,8 +1087,6 @@ pframe$`Treatment Order` = pframe$trt2
 
 
 ```{r}
-
-
 freqPlotIT <- ggplot(pframe, 
                      aes(x=IT_centered + IT_mean, y=predMean))+
      geom_line(aes(color = treatment_rewarded2))+ 
@@ -1114,8 +1112,8 @@ freqPlot_oneColony <- ggplot(pframe[pframe$Colony == "4", ],
            labs(y = "Sonication frequency (Hz)", x = "Intertegular span (mm)") + 
             facet_grid( ~ `Treatment Order`, labeller = labeller(`Treatment Order`= label_both, Colony = label_both), scales = 'free_x') +
                
-            scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8) + 
-            scale_fill_viridis_d( name = "Treatment", begin =0.3, end = 0.8) + 
+            scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
+            scale_fill_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A") + 
             theme(legend.position = c(0.2, 0.8), 
                   strip.background =element_rect(fill = "white", linetype = 1, size = 1, color = 'black'), 
                   legend.background = element_rect(fill=alpha('white', 1)), 
@@ -1186,7 +1184,7 @@ timePlot_freq <- ggplot(bees, aes(x = visitNum_centered, y = freq)) +
         ) + 
   labs(y = expression ("Sonication frequency  " (Hz)), 
                x = "Sonication Number") + 
-   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+   scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A",
                          guide = guide_legend(override.aes = list(alpha = 1, size = 2)))  + 
   geom_vline(aes(xintercept = 0), lty = 2)
 timePlot_freq
@@ -1215,7 +1213,7 @@ timePlot_acc <- ggplot(bees, aes(x = visitNum_centered, y = amp_acc)) +
         ) + 
   labs(y = expression ("Sonication acceleration  " (m~s^{-2})), 
                x = "Visit Number, centered") + 
-  scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+  scale_color_viridis_d(name = "Treatment", begin =0.1, end = 0.4, option = "A",
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2))) + 
   geom_vline(aes(xintercept = 0), lty = 2)
 
@@ -1236,7 +1234,8 @@ save_plot(file.path(figDir, "TimePlots_rewardNoReward.tiff"),
           plot = ab, base_width = 6.5, base_height = 5, dpi = 500)
 
 save_plot(file.path(figDir, "TimePlots_rewardNoReward_lowRes.png"), 
-          plot = ab, base_width = 6.5, base_height = 5, dpi = 200)
+          plot = ab, base_width = 8, base_height = 5, dpi = 700)
+
 
 ```
 
