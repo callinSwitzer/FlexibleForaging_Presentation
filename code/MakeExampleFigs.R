@@ -73,25 +73,9 @@ ggsave(file.path(figDir, "HypotheticalHighTrt.svg"), width = 4, height = 3)
 ggsave(file.path(figDir, "HypotheticalHighTrt.png"), dpi = 400, width = 4, height = 3)
 
 
-## Sonication accel
-
 ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) + 
   geom_point(alpha = 0.1, stroke = 0) + 
   stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
-  labs(y =  expression("Sonication acceleration     "        (m~s^{-2})), 
-       x = "Time") + 
-  theme(axis.text.x = element_blank(), 
-        axis.ticks.x = element_blank()) + 
-  ylim(c(250, 400))+ 
-  geom_hline(aes(yintercept = 330), lty = 2)
-
-ggsave(file.path(figDir, "HypotheticalLowTrt.png"), dpi = 400, width = 4, height = 3)
-
-
-
-ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) + 
-  #geom_point(alpha = 0.1, stroke = 0) + 
-  #stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
   labs(y = "Sonication frequency (Hz)", 
        x = "Time") + 
   theme(axis.text.x = element_blank(), 
@@ -101,6 +85,35 @@ ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) +
 
 ggsave(file.path(figDir, "HypotheticalLowTrt.svg"), width = 4, height = 3)
 ggsave(file.path(figDir, "HypotheticalLowTrt.png"), dpi = 400, width = 4, height = 3)
+
+
+## Sonication accel
+
+ggplot(data = data.frame(x = c(x, x3), y = c(y, y4)), aes(x , y)) + 
+  geom_point(alpha = 0.1, stroke = 0) + 
+  #stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  labs(y =  expression("Sonication acceleration " (m~s^{-2})), 
+       x = "Time") + 
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank()) + 
+  ylim(c(0, 50))+ 
+  geom_hline(aes(yintercept = 330), lty = 2)
+
+ggsave(file.path(figDir, "HypotheticalLowTrt_ACCEL.png"), dpi = 400, width = 4, height = 3)
+
+
+
+## Sonication accel for predictable, innate response
+
+ggplot(data = data.frame(x = c(x, x3), y = c(y, y3)), aes(x , (y-min(y))  / 7)) + 
+  geom_point(alpha = 0.1, stroke = 0) + 
+  stat_smooth(span = 0.9, se = FALSE, color = "#8856a7", size = 1.2) + 
+  labs(y =  expression("Sonication acceleration " (m~s^{-2})), 
+       x = "Time") + 
+  theme(axis.text.x = element_blank(), 
+        axis.ticks.x = element_blank()) 
+
+ggsave(file.path(figDir, "HypotheticalLowTrt_ACCEL2.png"), dpi = 400, width = 4, height = 3)
 
 
 
