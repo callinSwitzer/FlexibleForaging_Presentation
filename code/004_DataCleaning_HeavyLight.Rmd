@@ -153,14 +153,16 @@ newdf4$`Treatment Order` <- mapvalues(newdf3$trt2, from = c("Sham first", "Weigh
 
 timePlot_freq <- ggplot(newdf4, aes(x = visitNum_centered, y = freq)) + 
   geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
-             stroke = 0, size = 4, aes(color = treatment_I)) + 
+             stroke = 0, size = 1.5, aes(color = treatment_I)) + 
   geom_line(stat="smooth",method = "loess",aes(color = treatment_I),
               size = 1.2, span = 0.9,
               alpha = 0.7, show.legend = FALSE)+
   facet_wrap(~beeID, labeller = label_both) + 
   theme(legend.position = "top", 
         panel.background = element_rect(fill = "transparent",colour = NA), 
-        legend.direction = "horizontal"
+        panel.border = element_rect(fill = "transparent"),
+        legend.direction = "horizontal", 
+        strip.text = element_blank()
         ) +  
   geom_vline(aes(xintercept = 0), lty = 2) + 
   xlim(c(-50, 50)) + 
@@ -170,6 +172,11 @@ timePlot_freq <- ggplot(newdf4, aes(x = visitNum_centered, y = freq)) +
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
 
 timePlot_freq
+
+
+multiplier_Size = 1.5
+ggsave(filename = file.path(figDir, "HeavyLight_IndividualPLots_raw.tiff"), width = 6.5 * multiplier_Size, height = 5* multiplier_Size)
+ggsave(filename = file.path(figDir, "HeavyLight_IndividualPLots_raw.png"), width = 6.5* multiplier_Size, height = 5* multiplier_Size)
 
 ggplot(newdf4, aes( freq, fill = treatment_I)) + 
   geom_histogram()+
@@ -188,14 +195,15 @@ bees <- unique(newdf4$beeID)
 newdf4$cluster = 9999
 
 for(ii in 1:length(bees)){
-  beeID_ = bees[ii] # doesn't work fo bee 5
+  beeID_ = bees[ii] 
   data_ = newdf4[newdf4$beeID == beeID_ , ]
-  db_results = dbscan(as.matrix(data_$freq), eps = 27)
+  db_results = dbscan(as.matrix(data.frame(data_$freq)), eps = 29)
   
   newdf4$cluster[newdf4$beeID == beeID_ ] = db_results$cluster 
   
   lowClust = names(which.min(tapply(data_$freq, INDEX = db_results$cluster, mean))) %>% as.numeric
-  newdf4$cluster[newdf4$beeID == beeID_ &  newdf4$cluster == lowClust] = -1
+  # indicate low points or noise points if they're between the two groups
+  newdf4$cluster[newdf4$beeID == beeID_ &  (newdf4$cluster == lowClust | newdf4$cluster == 0) ] = -1
   
   if(sd(db_results$cluster) == 0){
     newdf4$cluster[newdf4$beeID == beeID_ ] = 1
@@ -208,11 +216,15 @@ for(ii in 1:length(bees)){
 }
 
 
+
+
+
 newdf4 <- newdf4 %>%
   mutate(clustNames= recode(.$cluster, "-1" = "low_cluster", .default = "otherClust"))
 
+# show points removed with dbscan
 ggplot(newdf4, aes(x = visitNum_centered, y = freq, color = as.factor(clustNames))) + 
-  geom_point(alpha = 1, position = position_jitter(width = 0, height = 4), 
+  geom_point(alpha = 1, position = position_jitter(width = 0, height = 1), 
              stroke = 0, size = 3) + 
   facet_wrap(~beeID, labeller = label_both) + 
   theme(legend.position = "top", 
@@ -227,9 +239,100 @@ ggplot(newdf4, aes(x = visitNum_centered, y = freq, color = as.factor(clustNames
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
 
 
+## do gaussian mixture modeling to remove some more
+ipak("mixtools")
+set.seed(123)
+newdf4$normCluster = 9999
+
+for(beeID_ in c("14", "2", "29", "31", "white")){
+    d3 <- newdf4[newdf4$beeID == beeID_ , ]
+    mixmdl <- normalmixEM(d3$freq, k = 2)
+    plot_mix_comps <- function(x, mu, sigma, lam) {
+      lam * dnorm(x, mu, sigma)
+    }
+    
+    smDF <- as.data.frame(mixmdl$posterior)
+    low = smDF$comp.1 > 0.5
+    
+    data.frame(x = mixmdl$x) %>%
+      ggplot() +
+      geom_histogram(aes(x, ..density..), binwidth = 10, colour = "black", 
+                     fill = "white") +
+      stat_function(geom = "line", fun = plot_mix_comps,
+                    args = list(mixmdl$mu[1], mixmdl$sigma[1], lam = mixmdl$lambda[1]),
+                    colour = "red", lwd = 1.5) +
+      stat_function(geom = "line", fun = plot_mix_comps,
+                    args = list(mixmdl$mu[2], mixmdl$sigma[2], lam = mixmdl$lambda[2]),
+                    colour = "blue", lwd = 1.5) +
+      ylab("Density")
+    
+    newdf4[newdf4$beeID == beeID_ , "normCluster"] = low
+  
+  
+}
+
+
+# plot which points were removed by normal mixture model
+ggplot(newdf4, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 4, aes(color = normCluster == 1 )) + 
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+
+# plot which points were removed (by both methods)
+ggplot(newdf4, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 4, aes(color = normCluster == 1 | as.factor(clustNames) == "low_cluster" )) + 
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Point removed", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+ggplot(newdf4, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.9, position = position_jitter(width = 0, height = 1), 
+             stroke = 1, size = 3, aes(shape = treatment_I, 
+                                       color =  normCluster == 1 | as.factor(clustNames) == "low_cluster" )) + 
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        panel.border = element_rect(fill = "transparent"),
+        legend.direction = "horizontal", 
+        strip.text = element_blank()
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Point removed", begin =0.3, end = 0.8) + 
+  scale_shape_manual(name = "Treatment", values = c(18, 20))
+
+
+multiplier_Size = 1.5
+ggsave(filename = file.path(figDir, "HeavyLight_IndividualPLots_Removed.tiff"), width = 6.5 * multiplier_Size, height = 5* multiplier_Size)
+ggsave(filename = file.path(figDir, "HeavyLight_IndividualPLots_Removed.png"), width = 6.5* multiplier_Size, height = 5* multiplier_Size)
+
+
 newdf5 <- newdf4[newdf4$cluster != -1, ]
+newdf5 <- newdf5[newdf5$normCluster != 1, ]
 
-
+# plot new data (cleaned)
 ggplot(newdf5, aes(x = visitNum_centered, y = freq)) + 
   geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
              stroke = 0, size = 4, aes(color = treatment_I)) + 
@@ -267,10 +370,16 @@ ggplot(newdf5, aes(x = visitNum_centered, y = freq)) +
                         guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
 
 
-# make a new df4, and redo stats to see if there is a difference
+# make a new df3, and redo stats to see if there is a difference
+newdf3_Original <- newdf3
 newdf3 <- newdf5
 newdf3$`Treatment Order` <- mapvalues(newdf3$trt2, from = c("Sham first", "Weighted first"), 
                           to = c("Sham first", "Increased mass first"))
+
+nrow(newdf3_Original)
+nrow(newdf3)
+
+nrow(newdf3_Original) - nrow(newdf3)
 
 ```
 
@@ -431,7 +540,7 @@ BIC(m1, m0) %>%
                    "FALSE" = " ")) # keep m1
 summary(m1)$coef
 
-m2 <- update(m1, .~. - treatment:visitNum_positive)
+m2 <- update(m1, .~. - treatment:IT_centered)
 BIC(m1, m2) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -439,7 +548,7 @@ BIC(m1, m2) %>%
                    "FALSE" = " ")) # keep m2 
 summary(m2)$coef
 
-m3 <- update(m2, .~. - treatment:IT_centered)
+m3 <- update(m2, .~. - treatment:visitNum_positive)
 BIC(m2, m3) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -455,7 +564,7 @@ BIC(m3, m4) %>%
                    "FALSE" = " ")) #keep m3
 summary(m3)$coef
 
-m5 <- update(m3, .~. - IT_centered)
+m5 <- update(m3, .~. - visitNum_positive)
 BIC(m3, m5)%>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -463,7 +572,7 @@ BIC(m3, m5)%>%
                    "FALSE" = " ")) # keep m5
 summary(m5)$coef
 
-m6 <- update(m5, .~. - hive)
+m6 <- update(m5, .~. - IT_centered)
 BIC(m5, m6) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -471,7 +580,7 @@ BIC(m5, m6) %>%
                    "FALSE" = " ")) # keep m6
 summary(m6)$coef
 
-m7 <- update(m6, .~. - visitNum_positive)
+m7 <- update(m6, .~. - hive)
 BIC(m7, m6) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -494,7 +603,7 @@ round(summary(fullmod_freq)$coef, digits = 3)
 finmod_freq <- update(m7, .~., REML = TRUE)
 summary(finmod_freq) # final model for paper 
 
-# refref: frequency model that has the same predictors as accel model
+# frequency model that has the same predictors as accel model
 matchingModel_freq =  lmer(freq ~ treatment + 
                              IT_centered  + 
                              treatment:IT_centered +  
@@ -503,13 +612,39 @@ matchingModel_freq =  lmer(freq ~ treatment +
                               (1 | beeID), 
                           data = newdf3, REML = TRUE)
 
+
 summary(matchingModel_freq)
+# write.csv(data.frame(round(summary(matchingModel_freq)$coef, digits = 3)), file = "coefs.csv")
 
 # 
 summary(finmod_freq) 
 plot(finmod_freq)
 qqnorm(ranef(finmod_freq)$beeID[[1]])
 qqline(ranef(finmod_freq)$beeID[[1]])
+
+## check predictions
+pframe_freq1 <- expand.grid(IT_centered  = 0,
+                     treatment = levels(droplevels(newdf3$treatment)),
+                     trt2 = levels(newdf3$trt2), 
+                     beeID = 99999)
+
+pframe_freq1$preds = predict(matchingModel_freq, newdata = pframe_freq1, re.form = NA)
+
+pframe_freq1
+
+
+# fit same model with original dataset to see differences
+matchingModel_freq_originalData =  lmer(freq ~ treatment + 
+                             IT_centered  + 
+                             treatment:IT_centered +  
+                             trt2 + 
+                             trt2:treatment + 
+                              (1 | beeID), 
+                          data = newdf3_Original, REML = TRUE)
+
+summary(matchingModel_freq_originalData)
+# write.csv(data.frame(round(summary(matchingModel_freq_originalData)$coef, digits = 3)), file = "coefs.csv")
+
 ```
 
 ### Bootstrap CI's for figure for paper
@@ -766,7 +901,7 @@ BIC(ma3, ma4) %>%
                    "FALSE" = " "))  # keep ma3
 summary(ma3)$coef
 
-ma5 <- update(ma3, .~. - trt2 )
+ma5 <- update(ma3, .~. - visitNum_positive )
 BIC(ma3, ma5) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -775,7 +910,7 @@ BIC(ma3, ma5) %>%
 summary(ma5)$coef
 
  
-ma6 <- update(ma5, .~. - visitNum_positive)
+ma6 <- update(ma5, .~. - hive)
 BIC(ma5, ma6) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -783,7 +918,7 @@ BIC(ma5, ma6) %>%
                    "FALSE" = " ")) #keep ma6
 summary(ma6)$coef
 
-ma7 <- update(ma6, .~. - hive)
+ma7 <- update(ma6, .~. - trt2)
 BIC(ma7, ma6) %>%
   mutate(model = row.names(.),
     keep = recode(as.character(order(.$BIC) == 1),
@@ -796,6 +931,8 @@ summary(ma7)$coef
 #______________________________________________
 fullMod_accel = update(m00, .~., REML = TRUE)
 summary(fullMod_accel) # summary of full model for paper
+# write.csv(data.frame(round(summary(fullMod_accel)$coef, digits = 3)), file = "coefs.csv")
+
 
 finmod_accel_notFreq <- update(ma7, .~., REML = TRUE)
 summary(finmod_accel_notFreq)
@@ -817,7 +954,22 @@ finmod_accel <- lmer(log(amp_acc) ~ treatment +
                              trt2:treatment + 
                               (1 | beeID), 
                           data = newdf3, REML = TRUE)
+summary(finmod_accel)
 
+# write.csv(data.frame(round(summary(finmod_accel)$coef, digits = 3)), file = "coefs.csv")
+
+# fit reduced model on original dataset to see differences
+finmod_accel_originalData <- lmer(log(amp_acc) ~ treatment + 
+                             IT_centered  + 
+                             treatment:IT_centered +  
+                             trt2 + 
+                             trt2:treatment + 
+                              (1 | beeID), 
+                          data = newdf3_Original, REML = TRUE)
+summary(finmod_accel_originalData)
+nrow(newdf3_Original) - nrow(newdf3)
+
+# write.csv(data.frame(round(summary(finmod_accel_originalData)$coef, digits = 3)), file = "coefs.csv")
 
 ```
 
@@ -940,7 +1092,7 @@ theme_set(theme_classic() +
                   text=element_text(size=10)))
 
 pfreq <- Fig2a + 
-  theme(legend.position = c(0.85,0.8), 
+  theme(legend.position = c(0.83,0.8), 
         #plot.margin = margin(c(0.2,0.0, 0.2, 0.2), unit = "cm"), 
         legend.title = element_text(size = 10), 
         legend.text = element_text(size = 8), 
