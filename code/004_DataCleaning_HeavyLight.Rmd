@@ -1,0 +1,276 @@
+---
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<pre>
+## Callin Switzer
+
+## Data cleaning for 
+## Analysis for experiment 3, physical constraint hypotheisis
+### i.e. Does the mass of a flower affect bees sonication acceleration and frequency?
+
+### Jan 17, 2019
+</pre>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+
+```{r, warning = FALSE, message=FALSE}
+#install packages
+ipak <- function(pkg){
+     new.pkg <- pkg[!(pkg %in% installed.packages()[, "Package"])]
+     if(length(new.pkg)) install.packages(new.pkg, dependencies = TRUE)
+     sapply(pkg, require, character.only = TRUE)
+}
+
+packages <- c("ggplot2", 'lme4', 'sjPlot', 
+              "multcomp", "plyr", "gamm4", 
+              "cowplot", "tidyverse")
+ipak(packages)
+
+# set ggplot theme
+theme_set(theme_classic() + 
+            theme(axis.text=element_text(colour="black"), 
+                  text=element_text(size=10)))
+
+# set  directories
+dataDir <- file.path(getwd(), "data")
+figDir <- file.path(getwd(), "figures")
+
+print(paste("last run ", Sys.time()))
+print(R.version)
+```
+
+# Read in data
+# Calculate some descriptive statistics
+
+
+```{r}
+new_df = read.csv(file.path(dataDir, "02_1_HeavyLight_cleaned_posAdded.csv"))
+
+# re-number colony number -- 3 & 4 should be 1 and 2
+new_df$hive <- as.factor(as.numeric(as.character(new_df$hive)) - 2)
+
+new_df$amp = new_df$MinMax_amp_Volts
+new_df$amp_acc = new_df$MinMax_amp_acc_m.s.s
+
+# divide amplitude by two
+new_df$amp = new_df$amp / 2
+new_df$amp_acc = new_df$amp_acc / 2
+
+new_df$hive = as.factor(new_df$hive)
+new_df$treatment <- mapvalues(new_df$treatment, from = c("sham", "weighted"), to = c("Sham", "Weighted"))
+
+# print some descriptive statistics
+nrow(new_df)
+unique(new_df$hive)
+
+# get sample size info
+summdf <- new_df %>%
+  group_by(beeID, treatment) %>%
+  summarize(id_count = n())
+
+
+sum(summdf$id_count)
+length(unique(summdf$beeID))
+nrow(summdf)
+
+```
+
+# Data engineering for analysis
+
+```{r}
+## add visitNumber counters for each bee and treatment
+new_df <- new_df %>%
+          arrange(beeID, datetime) %>%
+          group_by(Folder, treatment) %>%
+  # make visit number for each treatment
+          mutate(visitNum_positive = seq(n())) %>%
+          ungroup() 
+
+# make visitNum_positive
+newdf2 <- as.tbl(new_df)
+ 
+newdf2$trt_char <- as.character(newdf2$treatment)
+# get treatment ORDER
+trts <- (sapply(unique(newdf2$beeID), FUN = function(x){
+  startt = newdf2[newdf2$beeID == x & newdf2$rewNum == 1, "trt_char" ]
+  return(as.character(startt))
+}))
+
+df4 <- data.frame(beeID = unique(newdf2$beeID), trts = trts)
+
+newdf3 <- merge(newdf2, df4)
+
+newdf3$trt2 <- as.factor(paste(newdf3$trts, "first"))
+
+# calculate mean IT span (for centering)
+IT_mean <- newdf3%>% 
+    group_by(beeID) %>% 
+    slice(1) %>%
+  ungroup() %>%
+  dplyr::select(IT) %>%
+  summarise(mean = mean(IT)) %>%
+  as.numeric()
+
+print(IT_mean)
+
+# add new variable 
+# that is the centered IT span
+newdf3 <- newdf3 %>% 
+  mutate(IT_centered = IT - IT_mean)
+
+```
+
+
+```{r}
+# make visitNum centered
+
+newdf4 <- newdf3 %>%
+          arrange(beeID, desc(datetime)) %>%
+          group_by(Folder, treatment) %>%
+  # make visit number for each treatment
+          mutate(visitNum_neg = -seq(n())) %>%
+          mutate(visitNum_centered= ifelse((treatment == "Weighted" & trt2 == "Weighted first") | 
+                                             (treatment == "Sham" & trt2 == "Sham first"), yes = visitNum_neg, no =  visitNum_positive)) %>%
+          ungroup() %>%
+  arrange(beeID, datetime)
+  
+
+
+newdf4$treatment_I <- mapvalues(newdf3$treatment, from = c("Sham", "Weighted"), 
+                          to = c("Sham", "Increased mass"))
+
+newdf4$`Treatment Order` <- mapvalues(newdf3$trt2, from = c("Sham first", "Weighted first"), 
+                          to = c("Sham first", "Increased mass first"))
+
+
+timePlot_freq <- ggplot(newdf4, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 1, aes(color = treatment_I)) + 
+  geom_line(stat="smooth",method = "loess",aes(color = treatment_I),
+              size = 1.2, span = 0.9,
+              alpha = 0.7, show.legend = FALSE)+
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+timePlot_freq
+
+ggplot(newdf4, aes( freq, fill = treatment_I)) + 
+  geom_histogram()+
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+timePlot_freq
+
+
+# cluster with dbscan
+ipak("dbscan")
+
+bees <- unique(newdf4$beeID)
+newdf4$cluster = 9999
+
+for(ii in 1:length(bees)){
+  beeID_ = bees[ii] # doesn't work fo bee 5
+  data_ = newdf4[newdf4$beeID == beeID_ , ]
+  db_results = dbscan(as.matrix(data_$freq), eps = 15)
+  
+  newdf4$cluster[newdf4$beeID == beeID_ ] = db_results$cluster 
+  
+  lowClust = names(which.min(tapply(data_$freq, INDEX = db_results$cluster, mean))) %>% as.numeric
+  newdf4$cluster[newdf4$beeID == beeID_ &  newdf4$cluster == lowClust] = -1
+  
+  if(sd(db_results$cluster) == 0){
+    newdf4$cluster[newdf4$beeID == beeID_ ] = 1
+  }
+  
+  # data_2 = newdf4[newdf4$beeID == beeID_ & newdf4$treatment == "Sham", ]
+  # db_results2 = dbscan(as.matrix(data_2$freq), eps = 20)
+  # newdf4$cluster[newdf4$beeID == beeID_ & newdf4$treatment == "Sham"] = db_results2$cluster
+  
+}
+
+
+newdf4 <- newdf4 %>%
+  mutate(clustNames= recode(.$cluster, "-1" = "low_cluster", .default = "otherClust"))
+newdf4$clustNames
+
+ggplot(newdf4, aes(x = visitNum_centered, y = freq, color = as.factor(cluster))) + 
+  geom_point(alpha = 1, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 3) + 
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Cluster", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+
+newdf5 <- newdf4[newdf4$cluster != -1, ]
+
+
+ggplot(newdf5, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 1, aes(color = treatment_I)) + 
+  geom_line(stat="smooth",method = "loess",aes(color = treatment_I),
+              size = 1.2, span = 0.9,
+              alpha = 0.7, show.legend = FALSE)+
+  facet_wrap(~beeID, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+ggplot(newdf5, aes(x = visitNum_centered, y = freq)) + 
+  geom_point(alpha = 0.3, position = position_jitter(width = 0, height = 4), 
+             stroke = 0, size = 4, aes(color = treatment_I)) + 
+  geom_line(stat="smooth",method = "loess",aes(color = treatment_I),
+              size = 1.2, span = 0.9,
+              alpha = 0.7, show.legend = FALSE)+
+  facet_wrap(~`Treatment Order`, labeller = label_both) + 
+  theme(legend.position = "top", 
+        panel.background = element_rect(fill = "transparent",colour = NA), 
+        legend.direction = "horizontal"
+        ) +  
+  geom_vline(aes(xintercept = 0), lty = 2) + 
+  xlim(c(-50, 50)) + 
+  labs(y = expression ("Sonication frequency  "(Hz)), 
+               x = "Visit Number, centered") + 
+   scale_color_viridis_d(name = "Treatment", begin =0.3, end = 0.8, 
+                        guide = guide_legend(override.aes = list(alpha = 1, size = 2)))
+
+
+
+```
