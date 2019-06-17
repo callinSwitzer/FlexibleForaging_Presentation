@@ -201,8 +201,8 @@ ggplot(s44, aes(x = trt3,  y= IT_imputed)) +
 
 
 # supplementary figure for paper
-ggsave(file.path(figDir, "beeSize_exp1.tiff"), 
-       width = 6, height = 4, units = "in", dpi = 500)
+# ggsave(file.path(figDir, "beeSize_exp1.tiff"), 
+#        width = 6, height = 4, units = "in", dpi = 500)
 ```
 
 # Plot frequency vs. acceleration
@@ -228,8 +228,8 @@ ggp <- ggplot(sl[sl$trt2 == "full", ], aes(x = freq, y = amp_acc2)) +
 ggp
 
 # supplementary figure for paper
-ggsave(file.path(figDir, "freq_amp.png"), width = 6.5, 
-       height = 3, units = "in", dpi = 500)
+# ggsave(file.path(figDir, "freq_amp.png"), width = 6.5, 
+#        height = 3, units = "in", dpi = 500)
 ```
 
 
@@ -320,7 +320,7 @@ pframe0 %>%
 # Generate Bootstrap CI's for frequency
 ```{r bootstrap, cache = TRUE}
 # set number of bootstrap samples
-nbootSims = 10000
+nbootSims = 100
 
 # generate data frame for predictions
 pframe <- data.frame(expand.grid(trt = levels(sl$trt), 
@@ -382,6 +382,59 @@ g1 <- ggplot(pframe, aes(x=IT_imputed, y=predMean, color = trt3, fill = trt3))+
                              end =0.7, option = 'inferno')
 g1
 ```
+
+
+# Partial residual plots for frequency
+
+```{r}
+library("effects")
+
+
+m3 <- lmer(freq ~ trt + IT_imputed + trialNum +
+                   (1 + trialNum|beeColHive), 
+                REML = TRUE, 
+                data = sl)
+
+summary(m3)
+
+est <- Effect("trt", partial.residuals=T, mod = m3, se = TRUE)
+
+
+trt_est= plyr::mapvalues(est$variables$trt$levels, from = c("full", "high", "low"), 
+                        to = c("Full range\n(220 - 450 Hz)", 
+                               "High range\n(340 - 390 Hz)",
+                               "Low range\n(220 - 330 Hz)"))
+
+
+yloc = 370
+
+pfreq1 = ggplot(data = NULL) + 
+  geom_errorbar(aes(x=trt_est, 
+                    ymin=est$lower, 
+                    ymax=est$upper, 
+                    color = est$variables$trt$levels), 
+                width = 0.2, lwd = 1.3) + 
+  geom_point(aes(x = trt_est, y = est$fit), size = 3) + 
+  scale_color_viridis_d(name = "Frequency range\nfor reward", 
+                              end = 0.7, option = "inferno") + 
+  theme(legend.position = "none") + 
+  labs(x = "Frequency range for reward", 
+       y = expression(atop("Sonication frequency " (Hz), "(estimate and 95% CI)")))+ 
+  annotate("text", x = 1.5, y = yloc+7, label = "p<0.001", size = 4) +
+  annotate("text", x = 2, y = yloc+2, label = "p<0.001", size = 4) + 
+  annotate("segment", x = 1, xend = 2, y = yloc + 5, yend = yloc + 5) + 
+  annotate("segment", x = 1, xend = 3, y = yloc, yend = yloc)
+pfreq1    
+
+
+ggsave(filename = file.path(figDir, "freq_partial.png"), 
+       pfreq1, width = 5, 
+       height = 5, units = "in", dpi = 500)
+
+
+
+```
+
 
 
 # Visualization of frequency over time
@@ -479,8 +532,8 @@ ggplot(fta, aes(x = trialNum, y = freq, color = t5)) +
   labs(y = "Frequency (Hz)", x = "Trial Number")
 
 # supplementary figure for paper
-ggsave(filename = file.path(figDir,"freqLearningCurve.tiff"),
-       dpi = 500,  width = 6.5*1.5, height = 4*1.5, units = "in")
+# ggsave(filename = file.path(figDir,"freqLearningCurve.tiff"),
+#        dpi = 500,  width = 6.5*1.5, height = 4*1.5, units = "in")
 ```
 
 # Compare frequency analysis when 2 bees without IT are missing
@@ -631,6 +684,64 @@ pframe_a$bhi<-bb2_se[2,] %>% exp()
 pframe_a$predMean <- pp
 pframe_a <- pframe_a[, c('trt',"IT_imputed", "blo", "bhi", "predMean")]
 ```
+
+
+# Make partial residual plot for acceleration
+```{r}
+
+
+summary(maa3)
+
+esta <- Effect("trt", partial.residuals=T, mod = maa3, se = TRUE)
+
+
+trt_est_acc= plyr::mapvalues(esta$variables$trt$levels, from = c("full", "high", "low"), 
+                        to = c("Full range\n(220 - 450 Hz)", 
+                               "High range\n(340 - 390 Hz)",
+                               "Low range\n(220 - 330 Hz)"))
+
+
+
+yloc = 31.5
+
+pacc1 = ggplot(data = NULL) + 
+  geom_errorbar(aes(x=trt_est_acc, 
+                    ymin=exp(esta$lower), 
+                    ymax=exp(esta$upper), 
+                    color = esta$variables$trt$levels), 
+                width = 0.2, lwd = 1.3) + 
+  geom_point(aes(x = trt_est_acc, y = exp(esta$fit)), size = 3) + 
+  scale_color_viridis_d(name = "Frequency range\nfor reward", 
+                              end = 0.7, option = "inferno") + 
+  theme(legend.position = "none") + 
+  labs(y = expression(atop("Sonication acceleration " (m~s^{-2}), "(estimate and 95% CI)")), 
+             x = "Frequency range for reward") + 
+  annotate("text", x = 1.5, y = yloc+1.35, label = "p<0.001", size = 4) +
+  annotate("text", x = 2.5, y = yloc + 0.35, label = "p<0.01", size = 4) + 
+  annotate("segment", x = 1, xend = 2, y = yloc + 1, yend = yloc + 1) + 
+  annotate("segment", x = 2, xend = 3, y = yloc, yend = yloc)
+pacc1    
+
+
+ggsave(filename = file.path(figDir, "acc_partial.png"), 
+       pacc1, width = 5, 
+       height = 5, units = "in", dpi = 500)
+
+# combine acc and freq partial plots
+afc <- plot_grid(pfreq1, pacc1)
+
+afc
+
+png(file.path(figDir, "combined_PartialPlots.png"), 
+      width = 7.5, height = 4, units = "in", res = 500)
+afc
+dev.off()
+
+
+expression(atop("first line",
+            "second line" ~ x ^ 2))
+```
+
 
 
 # Make accel plot for paper
